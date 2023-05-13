@@ -1,46 +1,47 @@
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
+import { useTodoList } from '../composables/useTodoList.js';
 const todoRef = ref('');
-const todoListRef = ref([]);
 const isEditRef = ref(false);
+const { todoListRef, findById, findIndexById, add, show, edit, del, check } =
+  useTodoList();
 let editId = null;
 
 const editTodo = () => {
-  const todo = todoListRef.value.find((todo) => todo.id === editId);
-  todo.task = todoRef.value;
+  edit(editId, todoRef.value);
+
   isEditRef.value = false;
   todoRef.value = '';
-  localStorage.todoList = JSON.stringify(todoListRef.value);
   editId = null;
 };
 
 const addTodo = () => {
-  const id = new Date().getTime();
-  todoListRef.value.push({
-    id: id,
-    task: todoRef.value,
-  });
-
-  localStorage.todoList = JSON.stringify(todoListRef.value);
+  add(todoRef.value);
   todoRef.value = '';
 };
 
 const showTodo = (id) => {
-  const todo = todoListRef.value.find((todo) => todo.id === id);
-  todoRef.value = todo.task;
+  todoRef.value = findById(id).task;
   isEditRef.value = true;
   editId = id;
 };
 
 const deleteTodo = (id) => {
-  const todo = todoListRef.value.find((todo) => todo.id === id);
-  const index = todoListRef.value.findIndex((todo) => todo.id === id);
+  const todo = findById(id);
 
   if (!confirm(`「${todo.task}」を削除しますか？`)) return;
 
-  todoListRef.value.splice(index, 1);
-  localStorage.todoList = JSON.stringify(todoListRef.value);
+  del(id);
 };
+
+const checkTodo = (id) => {
+  check(id);
+};
+
+const countFin = computed(() => {
+  const finArr = todoListRef.value.filter((todo) => todo.checked);
+  return finArr.length;
+});
 </script>
 
 <template>
@@ -55,12 +56,14 @@ const deleteTodo = (id) => {
     <button v-else class="btn" @click="addTodo">追加</button>
     <div class="box_list">
       <div v-for="todo in todoListRef" :key="todo.id" class="todo_list">
-        <div class="todo">
+        <div class="todo" :class="{ fin: todo.checked }">
           <input
             type="checkbox"
             name="check"
             id="check1"
             class="check"
+            @click="checkTodo(todo.id)"
+            :checked="todo.checked"
           /><label>{{ todo.task }}</label>
         </div>
         <div class="btns">
@@ -68,6 +71,10 @@ const deleteTodo = (id) => {
           <button class="btn pink" @click="deleteTodo(todo.id)">削</button>
         </div>
       </div>
+    </div>
+    <div class="finCount">
+      <span>完了: {{ countFin }}, </span>
+      <span>未完了: {{ todoListRef.length - countFin }} </span>
     </div>
   </div>
 </template>
@@ -114,7 +121,7 @@ const deleteTodo = (id) => {
   padding: 12px;
   width: 300px;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
 }
 
 .check {
@@ -134,5 +141,16 @@ const deleteTodo = (id) => {
 
 .pink {
   background-color: #ff4081;
+}
+
+.fin {
+  text-decoration: line-through;
+  background-color: #ddd;
+  color: #777;
+}
+
+.finCount {
+  margin-top: 8px;
+  font-size: 0.8em;
 }
 </style>
